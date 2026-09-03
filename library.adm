@@ -1,0 +1,19 @@
+// humanize: numbers, byte counts, durations and instants as people read them.
+//
+//     use humanize
+//     humanize.bytes(1536000)            // "1.5 MB"
+//     humanize.span(2h + 5m)             // "2h 5m"
+//     humanize.ago(then)                 // "3 minutes ago"
+//     humanize.ordinal(22)               // "22nd"
+//     humanize.comma(1234567)            // "1,234,567"
+
+@manifest(version = "0.1.0")
+library humanize {
+	use (
+		humanize
+	)
+
+	export (
+		humanize
+	)
+}

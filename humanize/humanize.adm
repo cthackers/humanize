@@ -1,0 +1,144 @@
+// Numbers, byte counts, durations and instants formatted the way people read
+// them: `1.5 MB`, `2h 5m`, `3 minutes ago`, `22nd`, `1,234,567`.
+
+partial module humanize {
+	use std.time
+
+	internal const decimalUnits = ["B", "kB", "MB", "GB", "TB", "PB", "EB"]
+	internal const binaryUnits = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"]
+
+	// Formats a byte count with the largest unit that keeps the number under
+	// the unit's base and one decimal (rounded): `512 B`, `1.5 MB`, `3.4 GB`. Units are
+	// decimal (1000) by default; `binary` switches to 1024 and `KiB`, `MiB`, ….
+	// A negative count keeps its sign.
+	def bytes(count int64, binary bool = false) string {
+		let base = binary ?? (int64(1024), int64(1000))
+		let units = binary ?? (binaryUnits, decimalUnits)
+		let sign = ""
+		let n = count
+		if n < 0 {
+			sign = "-"
+			n = -n
+		}
+		return sign + sprint(n) + " " + units[0] when n < base
+		let unit = 0
+		let scaled = n
+		for scaled >= base && unit < units.len() - 1 {
+			scaled = scaled / base
+			unit += 1
+		}
+		// one decimal from the remainder, without floating point
+		let whole = n
+		for let i in 0..unit {
+			whole = whole / base
+		}
+		let divisor = int64(1)
+		for let i in 0..unit {
+			divisor = divisor * base
+		}
+		let tenths = ((n % divisor) * 10 + divisor / 2) / divisor
+		if tenths == 10 {
+			whole += 1
+			tenths = 0
+		}
+		return sign + sprint(whole) + " " + units[unit] when tenths == 0
+		return sign + sprint(whole) + "." + sprint(tenths) + " " + units[unit]
+	}
+
+	// Formats a duration with its two largest non-zero units: `2h 5m`, `3d 4h`,
+	// `45s`, `350ms`, `12µs`, `0s`. Days are 24 hours; a negative duration
+	// gets a leading `-`. (Named `span` because `duration` is the builtin type.)
+	def span(d duration) string {
+		let ns = int64(d)
+		let sign = ""
+		if ns < 0 {
+			sign = "-"
+			ns = -ns
+		}
+		return sign + "0s" when ns == 0
+		if ns < 1000 {
+			return sign + sprint(ns) + "ns"
+		}
+		if ns < 1000000 {
+			return sign + sprint(ns / 1000) + "µs"
+		}
+		if ns < 1000000000 {
+			return sign + sprint(ns / 1000000) + "ms"
+		}
+		let seconds = ns / 1000000000
+		let parts = []
+		let days = seconds / 86400
+		let hours = seconds % 86400 / 3600
+		let minutes = seconds % 3600 / 60
+		let secs = seconds % 60
+		parts.push(sprint(days) + "d") when days > 0
+		parts.push(sprint(hours) + "h") when hours > 0
+		parts.push(sprint(minutes) + "m") when minutes > 0
+		parts.push(sprint(secs) + "s") when secs > 0
+		return sign + parts[0] when parts.len() == 1
+		return sign + parts[0] + " " + parts[1]
+	}
+
+	// Says how far `t` is from `now` in words: `just now`, `3 minutes ago`,
+	// `yesterday`, `in 2 hours`, `5 years ago`. The largest fitting unit
+	// wins; `now` defaults to the current time.
+	def ago(t time.Time, now time.Time = time.now()) string {
+		let ns = int64(now - t)
+		let future = ns < 0
+		ns = -ns when future
+		let seconds = ns / 1000000000
+		return "just now" when seconds < 45
+		let text = relativeUnit(seconds)
+		return "in " + text when future
+		return text + " ago"
+	}
+
+	internal def relativeUnit(seconds int64) string {
+		return "a minute" when seconds < 90
+		return sprint((seconds + 30) / 60) + " minutes" when seconds < 45 * 60
+		return "an hour" when seconds < 90 * 60
+		return sprint((seconds + 1800) / 3600) + " hours" when seconds < 22 * 3600
+		return "a day" when seconds < 36 * 3600
+		return sprint((seconds + 43200) / 86400) + " days" when seconds < 26 * 86400
+		return "a month" when seconds < 45 * 86400
+		return sprint((seconds + 15 * 86400) / (30 * 86400)) + " months" when seconds < 320 * 86400
+		return "a year" when seconds < 548 * 86400
+		return sprint((seconds + 182 * 86400) / (365 * 86400)) + " years"
+	}
+
+	// Appends the English ordinal suffix: `1st`, `2nd`, `3rd`, `4th`, `11th`,
+	// `12th`, `13th`, `21st`, `112th`. A negative number keeps its sign.
+	def ordinal(n int) string {
+		let m = n.abs()
+		let suffix = "th"
+		if m % 100 < 11 || m % 100 > 13 {
+			match m % 10 {
+				case 1:
+					suffix = "st"
+				case 2:
+					suffix = "nd"
+				case 3:
+					suffix = "rd"
+				default:
+			}
+		}
+		return sprint(n) + suffix
+	}
+
+	// Groups the digits in threes: `1,234,567`; `-1,000`; `999` unchanged.
+	// `separator` replaces the comma (`comma(n, " ")` gives `1 234 567`).
+	def comma(n int64, separator string = ",") string {
+		let digits = sprint(n.abs())
+		let out = ""
+		let count = 0
+		let i = digits.len() - 1
+		for i >= 0 {
+			out = digits[i] + out
+			count += 1
+			out = separator + out when count % 3 == 0 && i > 0
+			i -= 1
+		}
+		return "-" + out when n < 0
+		return out
+	}
+}
