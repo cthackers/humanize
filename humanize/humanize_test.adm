@@ -67,4 +67,40 @@ partial module humanize {
 			assert comma(1234567, " ") == "1 234 567"
 		}
 	}
+
+	check "bytes" {
+		use std.testing
+
+		@test()
+		def rates() {
+			assert bytesPerSecond(1536000) == "1.5 MB/s"
+			assert bytesPerSecond(1536, true) == "1.5 KiB/s"
+			assert bytesPerSecond(0) == "0 B/s"
+		}
+
+		@test()
+		def parsing() !none {
+			assert (try parseBytes("0")) == 0
+			assert (try parseBytes("512")) == 512
+			assert (try parseBytes("512 B")) == 512
+			assert (try parseBytes("512 bytes")) == 512
+			assert (try parseBytes("1 kB")) == 1000
+			assert (try parseBytes("1.5 MB")) == 1500000
+			assert (try parseBytes("1.5MB")) == 1500000
+			assert (try parseBytes("1.5mb")) == 1500000
+			assert (try parseBytes("2k")) == 2000
+			assert (try parseBytes("3 GiB")) == 3221225472
+			assert (try parseBytes("1.5 KiB")) == 1536
+			assert (try parseBytes("0.5 MiB")) == 524288
+			assert (try parseBytes("-2 kB")) == -2000
+			assert (try parseBytes("  4 TB  ")) == 4000000000000
+			assert (try parseBytes("1.2345678 kB")) == 1234
+			assert (try parseBytes("1 EiB")) == 1152921504606846976
+			assert (try parseBytes("1.5 EiB")) == 1729382256910270464
+			assert parseBytes("") is error
+			assert parseBytes("MB") is error
+			assert parseBytes("1.5 XB") is error
+			assert parseBytes("abc") is error
+		}
+	}
 }

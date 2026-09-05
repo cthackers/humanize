@@ -1,0 +1,31 @@
+// Text helpers: joining lists the way a sentence does and shortening
+// strings to fit.
+
+partial module humanize {
+	// Joins items as a sentence would: `a`, `a and b`, `a, b and c`.
+	// `conjunction` replaces `and`; `oxford` adds the comma before it
+	// (`a, b, and c`). An empty list gives an empty string.
+	def list(items string[], conjunction string = "and", oxford bool = false) string {
+		return "" when items.len() == 0
+		return items[0] when items.len() == 1
+		return items[0] + " " + conjunction + " " + items[1] when items.len() == 2
+		let out = ""
+		for let i = 0; i < items.len() - 1; i++ {
+			out += ", " when i > 0
+			out += items[i]
+		}
+		out += "," when oxford
+		return out + " " + conjunction + " " + items[items.len() - 1]
+	}
+
+	// Cuts `s` to at most `max` characters (code points), replacing the tail
+	// with `ellipsis`: `truncate("hello world", 8)` is `hello w…`. Trailing
+	// spaces before the ellipsis are dropped. When `max` is too small to fit
+	// the ellipsis the string is cut without one.
+	def truncate(s string, max int, ellipsis string = "…") string {
+		return s when s.len() <= max
+		return "" when max <= 0
+		return s[:max] when max <= ellipsis.len()
+		return s[:max - ellipsis.len()].trimEnd() + ellipsis
+	}
+}

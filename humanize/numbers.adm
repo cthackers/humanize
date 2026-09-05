@@ -1,0 +1,159 @@
+// Plain numbers: short SI counters, percentages, English words and rough
+// approximations.
+
+partial module humanize {
+	internal const shortSuffixes = ["", "k", "M", "B", "T"]
+
+	internal const onesWords = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+	internal const tensWords = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+	internal const scaleWords = ["", "thousand", "million", "billion", "trillion", "quadrillion", "quintillion"]
+
+	// Shortens a count with a metric suffix: `950`, `1.2k`, `3.4M`, `7B`,
+	// `2.5T`. `precision` is the most decimals kept (0 to 6); trailing zeros
+	// are dropped, so `7.0B` reads `7B`. A negative count keeps its sign.
+	def number(n int64, precision int = 1) string {
+		let sign = ""
+		let m = n
+		if m < 0 {
+			sign = "-"
+			m = -m
+		}
+		return sign + sprint(m) when m < 1000
+		let p = precision.clamp(0, 6)
+		let pow = powerOfTen(p)
+		let unit = 0
+		let divisor = int64(1)
+		for m / divisor >= 1000 && unit < shortSuffixes.len() - 1 {
+			divisor *= 1000
+			unit += 1
+		}
+		let (whole, frac) = splitRounded(m, divisor, pow)
+		// rounding can carry 999.96k up to 1000k; move to the next unit
+		if whole >= 1000 && unit < shortSuffixes.len() - 1 {
+			divisor *= 1000
+			unit += 1
+			let (w, f) = splitRounded(m, divisor, pow)
+			whole = w
+			frac = f
+		}
+		return sign + sprint(whole) + shortSuffixes[unit] when frac == 0
+		return sign + sprint(whole) + "." + fractionDigits(frac, p) + shortSuffixes[unit]
+	}
+
+	// `m / divisor` as a whole part and a fraction scaled by `pow`, rounded
+	// half up, with the carry applied when the fraction rounds to one.
+	internal def splitRounded(m int64, divisor int64, pow int64) (int64, int64) {
+		let whole = m / divisor
+		let frac = ((m % divisor) * pow + divisor / 2) / divisor
+		if frac == pow {
+			whole += 1
+			frac = 0
+		}
+		return (whole, frac)
+	}
+
+	// `frac` as `width` digits with trailing zeros removed: 50 of 3 is `05`.
+	internal def fractionDigits(frac int64, width int) string {
+		let digits = sprint(frac).padStart(width, "0")
+		for digits.endsWith("0") {
+			digits = digits[:digits.len() - 1]
+		}
+		return digits
+	}
+
+	internal def powerOfTen(exponent int) int64 {
+		let pow = int64(1)
+		for let i in 0..exponent {
+			pow *= 10
+		}
+		return pow
+	}
+
+	// `part` as a percentage of `whole`: `percent(42, 100)` is `42%`,
+	// `percent(2, 3, 1)` is `66.7%`. `precision` is the number of decimals
+	// kept (0 to 6), rounded half away from zero. A zero `whole` gives `0%`.
+	def percent(part int64, whole int64, precision int = 0) string {
+		return "0%" when whole == 0
+		let p = precision.clamp(0, 6)
+		let num = part * 100 * powerOfTen(p)
+		let q = num / whole
+		let r = num % whole
+		if r.abs() * 2 >= whole.abs() {
+			q += ((num < 0) != (whole < 0)) ?? (int64(-1), int64(1))
+		}
+		return fixed(q, p) + "%"
+	}
+
+	// A ratio as a percentage: `percent(0.4213)` is `42%`, `percent(0.6667, 1)`
+	// is `66.7%`.
+	def percent(ratio float, precision int = 0) string {
+		let p = precision.clamp(0, 6)
+		let scaled = int64((ratio * 100.0 * float(powerOfTen(p))).round())
+		return fixed(scaled, p) + "%"
+	}
+
+	// `scaled / 10^decimals` with exactly `decimals` digits after the point.
+	internal def fixed(scaled int64, decimals int) string {
+		return sprint(scaled) when decimals == 0
+		let pow = powerOfTen(decimals)
+		let sign = scaled < 0 ?? ("-", "")
+		let m = scaled.abs()
+		return sign + sprint(m / pow) + "." + sprint(m % pow).padStart(decimals, "0")
+	}
+
+	// Spells a number out in English: `zero`, `twenty-one`, `one hundred
+	// five`, `one thousand two hundred thirty-four`, `minus seven`. Covers
+	// the whole int64 range (up to quintillions).
+	def words(n int64) string {
+		return "zero" when n == 0
+		let groups = int64[]
+		let m = n
+		for m != 0 {
+			let g = m % 1000
+			g = -g when g < 0
+			groups.push(g)
+			m = m / 1000
+		}
+		let out = ""
+		for let i = groups.len() - 1; i >= 0; i-- {
+			if groups[i] != 0 {
+				let part = hundredsWords(int(groups[i]))
+				part += " " + scaleWords[i] when i > 0
+				out += " " when out != ""
+				out += part
+			}
+		}
+		return "minus " + out when n < 0
+		return out
+	}
+
+	internal def hundredsWords(n int) string {
+		let out = ""
+		let hundreds = n / 100
+		let rest = n % 100
+		out = onesWords[hundreds] + " hundred" when hundreds > 0
+		return out when rest == 0
+		out += " " when out != ""
+		return out + onesWords[rest] when rest < 20
+		let tens = tensWords[rest / 10]
+		return out + tens when rest % 10 == 0
+		return out + tens + "-" + onesWords[rest % 10]
+	}
+
+	// Rounds to two significant digits and says so: `about 1,200`,
+	// `about 49k`, `about 1.2M`. Numbers under 100 and numbers the rounding
+	// leaves unchanged come back exact (`7`, `1,200`, `50k`). Counts of
+	// 10,000 and up use the `number` shorthand.
+	def fuzzyNumber(n int64) string {
+		let m = n.abs()
+		let scale = int64(1)
+		for m / scale >= 100 {
+			scale *= 10
+		}
+		let rounded = (m + scale / 2) / scale * scale
+		rounded = -rounded when n < 0
+		let text = rounded.abs() >= 10000 ?? (number(rounded, 1), comma(rounded))
+		return text when rounded == n
+		return "about " + text
+	}
+}

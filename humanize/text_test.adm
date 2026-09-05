@@ -1,0 +1,28 @@
+partial module humanize {
+	check "text" {
+		use std.testing
+
+		@test()
+		def lists() {
+			assert list([]) == ""
+			assert list(["a"]) == "a"
+			assert list(["a", "b"]) == "a and b"
+			assert list(["a", "b", "c"]) == "a, b and c"
+			assert list(["a", "b", "c", "d"], "and", true) == "a, b, c, and d"
+			assert list(["tea", "coffee"], "or") == "tea or coffee"
+			assert list(["a", "b", "c"], "or", true) == "a, b, or c"
+		}
+
+		@test()
+		def truncation() {
+			assert truncate("hello", 10) == "hello"
+			assert truncate("hello", 5) == "hello"
+			assert truncate("hello world", 8) == "hello w…"
+			assert truncate("hello world", 7) == "hello…"
+			assert truncate("hello world", 8, "...") == "hello..."
+			assert truncate("hello world", 1) == "h"
+			assert truncate("hello world", 0) == ""
+			assert truncate("héllo wörld", 6) == "héllo…"
+		}
+	}
+}

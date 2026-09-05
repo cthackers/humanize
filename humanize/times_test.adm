@@ -1,0 +1,62 @@
+partial module humanize {
+	check "times" {
+		use (
+			std.testing
+			std.time
+		)
+
+		@test()
+		def longDurations() {
+			assert spanLong(0s) == "0 seconds"
+			assert spanLong(1s) == "1 second"
+			assert spanLong(45s) == "45 seconds"
+			assert spanLong(350ms) == "350 milliseconds"
+			assert spanLong(1ms) == "1 millisecond"
+			assert spanLong(12us) == "12 microseconds"
+			assert spanLong(1h) == "1 hour"
+			assert spanLong(2h + 5m) == "2 hours 5 minutes"
+			assert spanLong(26h) == "1 day 2 hours"
+			assert spanLong(76h) == "3 days 4 hours"
+			assert spanLong(-90s) == "-1 minute 30 seconds"
+		}
+
+		@test()
+		def clocks() {
+			assert clock(0s) == "00:00"
+			assert clock(9s) == "00:09"
+			assert clock(5m + 9s) == "05:09"
+			assert clock(59m + 59s + 900ms) == "59:59"
+			assert clock(1h + 5m + 9s) == "01:05:09"
+			assert clock(76h) == "76:00:00"
+			assert clock(-(2m + 3s)) == "-02:03"
+		}
+
+		@test()
+		def distances() !none {
+			let now = try time.parse("2026-09-03T12:00:00Z")
+			assert until(now, now) == "less than a minute"
+			assert until(now + 30s, now) == "less than a minute"
+			assert until(now + 1m, now) == "a minute"
+			assert until(now + 3m, now) == "3 minutes"
+			assert until(now - 3m, now) == "3 minutes"
+			assert until(now + 2h, now) == "2 hours"
+			assert until(now + 26h, now) == "a day"
+			assert until(now + 19200h, now) == "2 years"
+		}
+
+		@test()
+		def dates() !none {
+			let now = try time.parse("2026-09-03T12:00:00Z")
+			assert date(now, now) == "today"
+			assert date(now + 11h, now) == "today"
+			assert date(now - 13h, now) == "yesterday"
+			assert date(now + 13h, now) == "tomorrow"
+			assert date(now + 96h, now) == "Mon 7 Sep"
+			assert date(now - 240h, now) == "Mon 24 Aug"
+			assert date(try time.parse("2026-01-01T00:00:00Z"), now) == "Thu 1 Jan"
+			assert date(try time.parse("2025-12-31T23:59:59Z"), now) == "31 Dec 2025"
+			assert date(try time.parse("2027-01-01T00:00:00Z"), now) == "1 Jan 2027"
+			assert date(try time.parse("1969-12-31T12:00:00Z"), now) == "31 Dec 1969"
+		}
+	}
+}

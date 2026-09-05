@@ -1,0 +1,104 @@
+// Durations and instants beyond `span` and `ago`: worded spans, clock
+// readouts, bare distances and calendar dates.
+
+partial module humanize {
+	use std.time
+
+	internal const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+	internal const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+	internal const nsPerDay = int64(86400000000000)
+
+	// `span` in words: `2 hours 5 minutes`, `1 day`, `45 seconds`,
+	// `350 milliseconds`, `0 seconds`. Same two-largest-units rule and sign
+	// handling as `span`.
+	def spanLong(d duration) string {
+		return spanText(int64(d), true)
+	}
+
+	// Shared body of `span` and `spanLong`.
+	internal def spanText(nanos int64, long bool) string {
+		let ns = nanos
+		let sign = ""
+		if ns < 0 {
+			sign = "-"
+			ns = -ns
+		}
+		return sign + unitText(0, "s", "second", long) when ns == 0
+		return sign + unitText(ns, "ns", "nanosecond", long) when ns < 1000
+		return sign + unitText(ns / 1000, "µs", "microsecond", long) when ns < 1000000
+		return sign + unitText(ns / 1000000, "ms", "millisecond", long) when ns < 1000000000
+		let seconds = ns / 1000000000
+		let parts = string[]
+		let days = seconds / 86400
+		let hours = seconds % 86400 / 3600
+		let minutes = seconds % 3600 / 60
+		let secs = seconds % 60
+		parts.push(unitText(days, "d", "day", long)) when days > 0
+		parts.push(unitText(hours, "h", "hour", long)) when hours > 0
+		parts.push(unitText(minutes, "m", "minute", long)) when minutes > 0
+		parts.push(unitText(secs, "s", "second", long)) when secs > 0
+		return sign + parts[0] when parts.len() == 1
+		return sign + parts[0] + " " + parts[1]
+	}
+
+	internal def unitText(n int64, short string, word string, long bool) string {
+		return sprint(n) + short unless long
+		return sprint(n) + " " + word when n == 1
+		return sprint(n) + " " + word + "s"
+	}
+
+	// A duration as a clock readout: `05:09` under an hour, `01:05:09` from
+	// an hour up; hours keep counting past 24 (`76:00:00`). Fractions of a
+	// second are dropped; a negative duration gets a leading `-`.
+	def clock(d duration) string {
+		let ns = int64(d)
+		let sign = ""
+		if ns < 0 {
+			sign = "-"
+			ns = -ns
+		}
+		let seconds = ns / 1000000000
+		let hours = seconds / 3600
+		let out = twoDigits(seconds % 3600 / 60) + ":" + twoDigits(seconds % 60)
+		out = twoDigits(hours) + ":" + out when hours > 0
+		return sign + out
+	}
+
+	internal def twoDigits(n int64) string {
+		return sprint(n).padStart(2, "0")
+	}
+
+	// The distance between `t` and `now` in words with no direction:
+	// `less than a minute`, `a minute`, `3 minutes`, `2 hours`, `a day`,
+	// `5 years`. For `"expires in " + until(deadline)` or `"took " + until(started, finished)`.
+	// `ago` is the directional form. `now` defaults to the current time.
+	def until(t time.Time, now time.Time = time.now()) string {
+		let ns = int64(t - now)
+		ns = -ns when ns < 0
+		let seconds = ns / 1000000000
+		return "less than a minute" when seconds < 45
+		return relativeUnit(seconds)
+	}
+
+	// A calendar day relative to `now`: `today`, `yesterday`, `tomorrow`,
+	// then `Mon 7 Sep` within the current year and `7 Sep 2025` otherwise.
+	// Days are UTC; `now` defaults to the current time.
+	def date(t time.Time, now time.Time = time.now()) string {
+		let diff = dayNumber(t) - dayNumber(now)
+		return "today" when diff == 0
+		return "yesterday" when diff == -1
+		return "tomorrow" when diff == 1
+		let text = sprint(t.day()) + " " + monthShort[t.month() - 1]
+		return weekdayShort[int(t.weekday())] + " " + text when t.year() == now.year()
+		return text + " " + sprint(t.year())
+	}
+
+	// Days since 1970-01-01 UTC, rounded down.
+	internal def dayNumber(t time.Time) int64 {
+		let ns = t.unixNs()
+		let day = ns / nsPerDay
+		day -= 1 when ns < 0 && ns % nsPerDay != 0
+		return day
+	}
+}

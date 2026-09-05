@@ -1,0 +1,74 @@
+partial module humanize {
+	check "numbers" {
+		use std.testing
+
+		@test()
+		def shortNumbers() {
+			assert number(0) == "0"
+			assert number(950) == "950"
+			assert number(1000) == "1k"
+			assert number(1234) == "1.2k"
+			assert number(1250) == "1.3k"
+			assert number(999960) == "1M"
+			assert number(3400000) == "3.4M"
+			assert number(7000000000) == "7B"
+			assert number(2500000000000) == "2.5T"
+			assert number(-1234) == "-1.2k"
+			assert number(1234, 0) == "1k"
+			assert number(1234567, 2) == "1.23M"
+			assert number(1204567, 3) == "1.205M"
+			assert number(1200000, 3) == "1.2M"
+		}
+
+		@test()
+		def percentages() {
+			assert percent(42, 100) == "42%"
+			assert percent(2, 3) == "67%"
+			assert percent(2, 3, 1) == "66.7%"
+			assert percent(1, 3, 2) == "33.33%"
+			assert percent(0, 10) == "0%"
+			assert percent(10, 0) == "0%"
+			assert percent(5, 4) == "125%"
+			assert percent(-1, 2, 1) == "-50.0%"
+			assert percent(1, 8, 1) == "12.5%"
+			assert percent(0.4213) == "42%"
+			assert percent(0.6667, 1) == "66.7%"
+			assert percent(1.0) == "100%"
+			assert percent(0.005, 2) == "0.50%"
+		}
+
+		@test()
+		def numberWords() {
+			assert words(0) == "zero"
+			assert words(7) == "seven"
+			assert words(13) == "thirteen"
+			assert words(20) == "twenty"
+			assert words(21) == "twenty-one"
+			assert words(100) == "one hundred"
+			assert words(105) == "one hundred five"
+			assert words(999) == "nine hundred ninety-nine"
+			assert words(1000) == "one thousand"
+			assert words(1234) == "one thousand two hundred thirty-four"
+			assert words(1000000) == "one million"
+			assert words(2000001) == "two million one"
+			assert words(-7) == "minus seven"
+			assert words(9223372036854775807) == "nine quintillion two hundred twenty-three quadrillion three hundred seventy-two trillion thirty-six billion eight hundred fifty-four million seven hundred seventy-five thousand eight hundred seven"
+			assert words(-9223372036854775808) == "minus nine quintillion two hundred twenty-three quadrillion three hundred seventy-two trillion thirty-six billion eight hundred fifty-four million seven hundred seventy-five thousand eight hundred eight"
+		}
+
+		@test()
+		def fuzzyNumbers() {
+			assert fuzzyNumber(0) == "0"
+			assert fuzzyNumber(7) == "7"
+			assert fuzzyNumber(99) == "99"
+			assert fuzzyNumber(123) == "about 120"
+			assert fuzzyNumber(1200) == "1,200"
+			assert fuzzyNumber(1234) == "about 1,200"
+			assert fuzzyNumber(999) == "about 1,000"
+			assert fuzzyNumber(48713) == "about 49k"
+			assert fuzzyNumber(50000) == "50k"
+			assert fuzzyNumber(1234567) == "about 1.2M"
+			assert fuzzyNumber(-1234) == "about -1,200"
+		}
+	}
+}
