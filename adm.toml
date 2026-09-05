@@ -24,6 +24,7 @@ repo_salt = "base64:4N/EzwyJBF1CpSu62VdgdVB/I3VuPv0JabZdte1EXGw="
 
 # Optional publisher display name (not used for identity).
 # name = "Your Company"
+name = "ByteFoundry"
 
 [update]
 # Optional global update defaults (per-app overrides can replace these).
@@ -58,3 +59,15 @@ repo_salt = "base64:4N/EzwyJBF1CpSu62VdgdVB/I3VuPv0JabZdte1EXGw="
 # [[apps."MainApp".package.files]]
 # from = "assets/"
 # to = "assets/"
+
+[apps.humanize]
+description = "Numbers, byte counts, durations and instants formatted the way people read them."
+
+[registries]
+order = ["public", "zenitech"]
+
+[registries.public]
+url = "https://github.com/admlang/registry"
+
+[registries.zenitech]
+url = "https://github.com/admlang/registry"

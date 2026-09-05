@@ -8,6 +8,7 @@ partial module humanize {
 		@test()
 		def byteCounts() {
 			assert bytes(0) == "0 B"
+			assert bytes(0) == "0 B"
 			assert bytes(512) == "512 B"
 			assert bytes(1000) == "1 kB"
 			assert bytes(1536000) == "1.5 MB"

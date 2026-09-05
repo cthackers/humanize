@@ -29,11 +29,11 @@ partial module humanize {
 		}
 		// one decimal from the remainder, without floating point
 		let whole = n
-		for let i in 0..unit {
+		for _ in 0..unit {
 			whole = whole / base
 		}
 		let divisor = int64(1)
-		for let i in 0..unit {
+		for _ in 0..unit {
 			divisor = divisor * base
 		}
 		let tenths = ((n % divisor) * 10 + divisor / 2) / divisor
@@ -117,7 +117,7 @@ partial module humanize {
 
 	internal def powerOf(base int64, exponent int) int64 {
 		let out = int64(1)
-		for let i in 0..exponent {
+		for _ in 0..exponent {
 			out *= base
 		}
 		return out

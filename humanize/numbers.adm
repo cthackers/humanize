@@ -63,7 +63,7 @@ partial module humanize {
 
 	internal def powerOfTen(exponent int) int64 {
 		let pow = int64(1)
-		for let i in 0..exponent {
+		for _ in 0..exponent {
 			pow *= 10
 		}
 		return pow
