@@ -78,9 +78,7 @@ partial module humanize {
 		let num = part * 100 * powerOfTen(p)
 		let q = num / whole
 		let r = num % whole
-		if r.abs() * 2 >= whole.abs() {
-			q += ((num < 0) != (whole < 0)) ?? (int64(-1), int64(1))
-		}
+		q += ((num < 0) != (whole < 0)) ?? (int64(-1), int64(1)) when r.abs() * 2 >= whole.abs()
 		return fixed(q, p) + "%"
 	}
 

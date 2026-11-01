@@ -61,6 +61,7 @@ name = "ByteFoundry"
 # to = "assets/"
 
 [apps.humanize]
+version = "0.2.0"
 description = "Numbers, byte counts, durations and instants formatted the way people read them."
 
 [registries]
@@ -71,3 +72,4 @@ url = "https://github.com/admlang/registry"
 
 [registries.zenitech]
 url = "https://github.com/admlang/registry"
+
